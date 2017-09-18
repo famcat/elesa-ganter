@@ -8,7 +8,6 @@ protected/data/*.db
 themes/classic/views/
 .idea
 composer.phar
-composer.json
 composer.lock
 vagrant
 .vagrant

@@ -1,0 +1,7 @@
+{
+    "require": {
+        "yiisoft/yii2-httpclient": "^2.0",
+        "guzzlehttp/guzzle": "^6.3",
+        "electrolinux/phpquery": "^0.9.6"
+    }
+}
