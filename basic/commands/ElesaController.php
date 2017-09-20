@@ -57,7 +57,7 @@ class ElesaController extends Controller
                  $new_type  = Types::findOne($query['id']);
              }
              $new_type->name = trim($pq->text());
-             $new_type->url = trim($pq->attr('href'));
+             $new_type->url = urldecode(trim($pq->attr('href')));
              $new_type->url_img = $pq->find('img')->attr('src');
              $new_type->save();
          }
@@ -96,7 +96,7 @@ class ElesaController extends Controller
                 }
                 $production->name = trim((String)$pq->find('h2')->text());
                 $production->description = trim((String)$pq->find('.series-overview-subtitle')->text());
-                $production->url = trim((String)$pq->find('a')->attr('href'));
+                $production->url = urldecode(trim((String)$pq->find('a')->attr('href')));
                 $production->materail = trim((String)$pq->find('.series-overview-subtitle_sec')->text());
                 $production->img_url = trim((String)$pq->find('img')->attr('src'));
                 $production->types_id = $id_type;
@@ -116,9 +116,9 @@ class ElesaController extends Controller
     public function actionSchema(){
         $queryProduction = Productions::find()->asArray()->all();
 
-//        $this->getSchema($queryProduction);
-//        $this->productionSchema($queryProduction);
-        $this->getImageSchema($queryProduction);
+        $this->getSchema($queryProduction);
+        $this->productionSchema($queryProduction);
+//        $this->getImageSchema($queryProduction);
 
         $querySchema = Schema_productions::find()->count();
         $this->writeMessage('Schema productions ' . $querySchema);
