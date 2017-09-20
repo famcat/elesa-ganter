@@ -12,6 +12,8 @@ use Yii;
  * @property integer $production_id
  * @property string $schema_id
  * @property string $img_production_url
+ * @property string $img_schema
+ * @property string $expires
  *
  * @property Productions $production
  */
@@ -34,7 +36,8 @@ class Schema_productions extends \yii\db\ActiveRecord
             [['name_schema'], 'string'],
             [['production_id'], 'required'],
             [['production_id'], 'integer'],
-            [['schema_id', 'img_production_url','img_schema'], 'string', 'max' => 255],
+            [['expires'], 'safe'],
+            [['schema_id', 'img_production_url', 'img_schema'], 'string', 'max' => 255],
             [['production_id'], 'exist', 'skipOnError' => true, 'targetClass' => Productions::className(), 'targetAttribute' => ['production_id' => 'id']],
         ];
     }
@@ -50,7 +53,8 @@ class Schema_productions extends \yii\db\ActiveRecord
             'production_id' => 'Production ID',
             'schema_id' => 'Schema ID',
             'img_production_url' => 'Img Production Url',
-            'img_schema' => 'Image Schema'
+            'img_schema' => 'Img Schema',
+            'expires' => 'Expires',
         ];
     }
 

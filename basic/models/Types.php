@@ -10,6 +10,10 @@ use Yii;
  * @property integer $id
  * @property string $name
  * @property string $url
+ * @property string $url_img
+ * @property string $expires
+ *
+ * @property Productions[] $productions
  */
 class Types extends \yii\db\ActiveRecord
 {
@@ -28,7 +32,9 @@ class Types extends \yii\db\ActiveRecord
     {
         return [
             [['name', 'url'], 'required'],
-            [['name', 'url'], 'string', 'max' => 255],
+            [['url'], 'string'],
+            [['expires'], 'safe'],
+            [['name', 'url_img'], 'string', 'max' => 255],
         ];
     }
 
@@ -41,6 +47,16 @@ class Types extends \yii\db\ActiveRecord
             'id' => 'ID',
             'name' => 'Name',
             'url' => 'Url',
+            'url_img' => 'Url Img',
+            'expires' => 'Expires',
         ];
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getProductions()
+    {
+        return $this->hasMany(Productions::className(), ['types_id' => 'id']);
     }
 }

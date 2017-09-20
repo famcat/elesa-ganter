@@ -15,8 +15,14 @@ use Yii;
  * @property string $full_description
  * @property string $img_url
  * @property integer $types_id
+ * @property string $expires
  *
+ * @property ColorField[] $colorFields
+ * @property ColorList[] $colorLists
+ * @property Filter[] $filters
+ * @property FilterArticle[] $filterArticles
  * @property Types $types
+ * @property SchemaProductions[] $schemaProductions
  */
 class Productions extends \yii\db\ActiveRecord
 {
@@ -37,6 +43,7 @@ class Productions extends \yii\db\ActiveRecord
             [['name', 'types_id'], 'required'],
             [['description', 'full_description'], 'string'],
             [['types_id'], 'integer'],
+            [['expires'], 'safe'],
             [['name', 'materail', 'url', 'img_url'], 'string', 'max' => 255],
             [['types_id'], 'exist', 'skipOnError' => true, 'targetClass' => Types::className(), 'targetAttribute' => ['types_id' => 'id']],
         ];
@@ -56,7 +63,40 @@ class Productions extends \yii\db\ActiveRecord
             'full_description' => 'Full Description',
             'img_url' => 'Img Url',
             'types_id' => 'Types ID',
+            'expires' => 'Expires',
         ];
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getColorFields()
+    {
+        return $this->hasMany(ColorField::className(), ['production_id' => 'id']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getColorLists()
+    {
+        return $this->hasMany(ColorList::className(), ['production_id' => 'id']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getFilters()
+    {
+        return $this->hasMany(Filter::className(), ['production_id' => 'id']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getFilterArticles()
+    {
+        return $this->hasMany(FilterArticle::className(), ['production_id' => 'id']);
     }
 
     /**
@@ -65,5 +105,13 @@ class Productions extends \yii\db\ActiveRecord
     public function getTypes()
     {
         return $this->hasOne(Types::className(), ['id' => 'types_id']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getSchemaProductions()
+    {
+        return $this->hasMany(SchemaProductions::className(), ['production_id' => 'id']);
     }
 }

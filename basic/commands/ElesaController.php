@@ -8,6 +8,7 @@ namespace app\commands;
 
 use phpDocumentor\Reflection\Types\Integer;
 use Yii;
+use yii\console\Exception;
 use yii\helpers\Console;
 use yii\console\Application;
 use GuzzleHttp\Client;
@@ -21,6 +22,7 @@ use app\models\Filter_data;
 use app\models\Color_field;
 use app\models\Color_list;
 use app\models\Color_value;
+use yii\helpers\BaseFileHelper;
 /**
  * Контроллер для elesa
  *
@@ -46,15 +48,18 @@ class ElesaController extends Controller
          foreach ($types as $type){
              $pq = pq($type);
              $query = Types::find()
-                    ->where(['name' => trim($pq->text()), 'url'=>trim($pq->attr('href'))])
-                    ->asArray()->all();
+                    ->where(['name' => trim($pq->text())])
+                    ->asArray()->one();
 
-             if (count($query) == 0){
+            if (count($query) == 0){
                  $new_type = new Types();
-                 $new_type->name = trim($pq->text());
-                 $new_type->url = trim($pq->attr('href'));
-                 $new_type->save();
+             }else{
+                 $new_type  = Types::findOne($query['id']);
              }
+             $new_type->name = trim($pq->text());
+             $new_type->url = trim($pq->attr('href'));
+             $new_type->url_img = $pq->find('img')->attr('src');
+             $new_type->save();
          }
         $query = Types::find()->count();
         $this->writeMessage('Types: '.$query);
@@ -111,8 +116,8 @@ class ElesaController extends Controller
     public function actionSchema(){
         $queryProduction = Productions::find()->asArray()->all();
 
-        $this->getSchema($queryProduction);
-        $this->productionSchema($queryProduction);
+//        $this->getSchema($queryProduction);
+//        $this->productionSchema($queryProduction);
         $this->getImageSchema($queryProduction);
 
         $querySchema = Schema_productions::find()->count();
@@ -173,17 +178,38 @@ class ElesaController extends Controller
         }
     }
 
+    //todo-me Добавить схемы
     private function getImageSchema($queryProduction){
+//        foreach ($queryProduction as $production){
+//            $query_prod = Schema_productions::find()
+//                ->where(['production_id' => $production['id']])
+//                ->asArray()->one();
+//
+//            if (($query_prod['schema_id'] != '') && ($query_prod['img_schema'] == '')){
+//                $production = Productions::findOne($query_prod['production_id']);
+                $production = Productions::findOne(1);
+                $document = $this->getPage(self::BASE_URL.$production->url);
+                $productionData = $document->find('.product-datas')
+                    ->find('.product-data-wrapper');
 
-        foreach ($queryProduction as $production){
-            $query_prod = Schema_productions::find()
-                ->where(['production_id' => $production['id']])
-                ->asArray()->one();
-
-            if (($query_prod['schema_id'] != '') && ($query_prod['img_schema'] == '')){
-
-            }
-        }
+                    $schema = Schema_productions::find()
+                            ->where(['production_id'=>1])->asArray()
+                            ->all();
+                    foreach ($schema as $sch){
+                        foreach ($productionData as $prod){
+                            $pq = pq($prod);
+                            if ($pq->attr('data-execution-id') == $sch['schema_id']){
+                                echo $pq->find('.product-drawing')
+                                    ->find('.row')
+                                    ->find('.columns')
+                                    ->find('img')
+                                    ->attr('src');
+                            }
+                        }
+                    }
+//                }
+//            }
+//        }
 
     }
     /**
@@ -204,7 +230,42 @@ class ElesaController extends Controller
      * Получить изображения
      */
     public function actionGetImage(){
+        BaseFileHelper::removeDirectory(Yii::getAlias('@app').'/image');
+        BaseFileHelper::createDirectory(Yii::getAlias('@app').'/image');
+        $this->getImageTypes();
+        $this->getImageProductions();
+    }
 
+    private function getImageTypes(){
+        $queryTypes = Types::find()->asArray()->all();
+        foreach ($queryTypes as $types){
+            $query = Types::findOne($types['id']);
+            $image_file = $this->generateRandomString(8).'.jpg';
+            $query->url_img = $image_file;
+            $query->save();
+            $this->getImageRemot(self::BASE_URL.$types['url_img'],$image_file);
+        }
+    }
+
+    private function getImageProductions(){
+        $queryTypes = Productions::find()->asArray()->all();
+        foreach ($queryTypes as $types){
+            $query = Productions::findOne($types['id']);
+            $image_file = $this->generateRandomString(10).'.png';
+            $query->img_url = $image_file;
+            $query->save();
+            $this->getImageRemot(self::BASE_URL.$types['img_url'],$image_file);
+        }
+    }
+    //todo-me Добавить забор картинки из схемы
+    private function getImageRemot($url,$toFile){
+        try{
+            $fileImage = fopen(Yii::getAlias('@app').'/image/'.$toFile,'w');
+            $client = new Client();
+            $res = $client->get($url,['save_to' => $fileImage]);
+        }catch (Exception $e){
+            return $e->getMessage();
+        }
     }
 
     private function writeMessage($message){
@@ -214,5 +275,28 @@ class ElesaController extends Controller
         } else {
             echo $message . "\n";
         }
+    }
+
+    private function generateRandomString($length = 8, $allowUppercase = true)
+    {
+        $validCharacters = 'abcdefghijklmnopqrstuxyvwz1234567890';
+        if ($allowUppercase) {
+            $validCharacters .= 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        }
+        $validCharNumber = strlen($validCharacters);
+        $result = '';
+        for ($i = 0; $i < $length; $i++) {
+            $index = mt_rand(0, $validCharNumber - 1);
+            $result .= $validCharacters[$index];
+        }
+        return $result;
+    }
+
+    private function getPage($url){
+        $clinet = new Client();
+        $res = $clinet->request('GET',$url);
+        $body = $res->getBody();
+        $document = \phpQuery::newDocumentHTML($body);
+        return $document;
     }
 }
