@@ -215,7 +215,6 @@ class ElesaController extends Controller
 
                 $pq = pq($schema);
                 $schema_id = trim($pq->attr('data-execution-id')); //Берем schema_id
-                $this->writeMessage($schema_id);
 
                 if ($schema_id !== ''){
                     $query_prod = Schema_productions::findOne(['schema_id' => $schema_id]);
