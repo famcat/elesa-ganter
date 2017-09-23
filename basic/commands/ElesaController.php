@@ -262,30 +262,12 @@ class ElesaController extends Controller
     }
 
     private function getProductionSchema($queryProduction){
-        $schemaList = Schema_productions::find([
-            'schema_id' => ''
-        ]);
-
-        foreach ($schemaList as $schema){
-
-            $schema = Schema_productions::findOne($schema->id);
-
-            $production = Productions::findOne($schema->production_id);
-
-            $document = $this->getPage(self::BASE_URL.$production->url);
-            $this->deleteImage($schema->img_schema);
-            $image_file = $this->generateRandomString(12).'.jpg';
-            $url_img = $document->find('.product-drawing')->find('img')->attr('src');
-            $schema->img_schema = $image_file;
-            $schema->save();
-            $this->getImageRemot(self::BASE_URL.$url_img,$image_file);
-        }
-
+        //Добавления элементов
         foreach ($queryProduction as $production){
-            $productInfo = Schema_productions::find()
-                ->where(['production_id'=>$production['id']])
-                ->asArray()->all();
-            if (count($productInfo) == 0){
+            $schemaList = Schema_productions::findOne([
+                'production_id' => $production['id']
+            ]);
+            if (!isset($schemaList)){
                 try {
                     $document = $this->getPage(self::BASE_URL.$production['url']);
                     $schema_db = new Schema_productions();
@@ -294,7 +276,7 @@ class ElesaController extends Controller
                     $schema_db->schema_id = '';
                     $schema_db->img_production_url = '';
 
-                    $image_file = $this->generateRandomString(12).'.jpg';
+                    $image_file = $this->generateRandomString(20).'.png';
                     $url_img = $document->find('.product-drawing')->find('img')->attr('src');
                     $schema_db->img_schema = $image_file;
                     $schema_db->save();
@@ -303,6 +285,19 @@ class ElesaController extends Controller
                     $this->writeMessage($e->getMessage());
                 }
             }
+        }
+
+        $schemaList = Schema_productions::find()->where('schema_id=""')->all();
+
+        foreach ($schemaList as $schema){
+            $production = Productions::findOne($schema->production_id);
+            $document = $this->getPage(self::BASE_URL.$production->url);
+            $this->deleteImage($schema->img_schema);
+            $image_file = $this->generateRandomString(20).'.png';
+            $url_img = $document->find('.product-drawing')->find('img')->attr('src');
+            $schema->img_schema = $image_file;
+            $schema->save();
+            $this->getImageRemot(self::BASE_URL.$url_img,$image_file);
         }
     }
 
