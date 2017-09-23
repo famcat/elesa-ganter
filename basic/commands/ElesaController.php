@@ -53,13 +53,21 @@ class ElesaController extends Controller
 
             if (count($query) == 0){
                  $new_type = new Types();
+                 $new_type->name = trim($pq->text());
              }else{
                  $new_type  = Types::findOne($query['id']);
+                 $this->deleteImage($new_type->url_img);
              }
-             $new_type->name = trim($pq->text());
+
              $new_type->url = urldecode(trim($pq->attr('href')));
-             $new_type->url_img = $pq->find('img')->attr('src');
+
+             $image_file = $this->generateRandomString(8).'.jpg';
+             $url_img = $pq->find('img')->attr('src');
+
+             $new_type->url_img = $image_file;
              $new_type->save();
+
+             $this->getImageRemot(self::BASE_URL.$url_img,$image_file);
          }
         $query = Types::find()->count();
         $this->writeMessage('Types: '.$query);
@@ -73,10 +81,8 @@ class ElesaController extends Controller
 
         //Малое обновления
         foreach ($queryTypes as $type){
-            $clinet = new Client();
-            $res = $clinet->request('GET',self::BASE_URL.$type['url']);
-            $body = $res->getBody();
-            $document = \phpQuery::newDocumentHTML($body);
+
+            $document = $this->getPage(self::BASE_URL.$type['url']);
             $production_list = $document->find('.product-index-tile');
 
             foreach ($production_list as $elem){
@@ -84,30 +90,33 @@ class ElesaController extends Controller
                 $name = trim((String)$pq->find('h2')->text());
                 $id_type = $type['id']; //ID продукции
 
-                $url = trim((String)$pq->find('a')->attr('href'));
-                $query = Productions::find()
-                    ->where(['name' => $name,'url' => $url])
-                    ->asArray()->one();
+                $url = urldecode(trim((String)$pq->find('a')->attr('href')));
+
+                $query = Productions::findOne(['name' => $name,'url' => $url]);
 
                 if (count($query) == 0){
-                    $production  = new Productions();
+                    $query  = new Productions();
+                    $query->name = trim((String)$pq->find('h2')->text());
+                    $query->url = urldecode(trim((String)$pq->find('a')->attr('href')));
                 }else{
-                    $production  = Productions::findOne($query['id']);
+                    $this->deleteImage($query->img_url);
                 }
-                $production->name = trim((String)$pq->find('h2')->text());
-                $production->description = trim((String)$pq->find('.series-overview-subtitle')->text());
-                $production->url = urldecode(trim((String)$pq->find('a')->attr('href')));
-                $production->materail = trim((String)$pq->find('.series-overview-subtitle_sec')->text());
-                $production->img_url = trim((String)$pq->find('img')->attr('src'));
-                $production->types_id = $id_type;
-                $production->save();
+                $query->description = trim((String)$pq->find('.series-overview-subtitle')->text());
+                $query->materail = trim((String)$pq->find('.series-overview-subtitle_sec')->text());
 
+                $image_file = $this->generateRandomString(10).'.png';
+                $url_img = trim((String)$pq->find('img')->attr('src'));
+
+                $query->img_url = $image_file;
+                $query->types_id = $id_type;
+                $query->save();
+
+                $this->getImageRemot(self::BASE_URL.$url_img,$image_file);
             }
         }
 
         $query = Productions::find()->count();
         $this->writeMessage('Count productions: ' . $query);
-
     }
 
     /**
@@ -115,149 +124,190 @@ class ElesaController extends Controller
      */
     public function actionSchema(){
         $queryProduction = Productions::find()->asArray()->all();
-
         $this->getSchema($queryProduction);
-        $this->productionSchema($queryProduction);
-//        $this->getImageSchema($queryProduction);
-
+        $this->getProductionSchema($queryProduction);
         $querySchema = Schema_productions::find()->count();
         $this->writeMessage('Schema productions ' . $querySchema);
     }
 
 
+    /**
+     * Получить наименование фильтров и артикулы
+     */
+    public function actionFilter(){
+        $productList = Productions::find()->all();
+        foreach ($productList as $product){
+            $document = $this->getPage(self::BASE_URL.$product->url);
+            $productionData = $document->find('.product-datas')->find('.product-data-wrapper');
+            foreach ($productionData as $prod){
+                $_pq = pq($prod);
+
+                $thead = $_pq->find('.product-dimensions-table')
+                    ->find('.row')
+                    ->find('.columns')
+                    ->find('.table-wrapper')
+                    ->find('.custom')
+                    ->find('.overflow-container')
+                    ->find('table')->find('thead')
+                    ->find('.titlerow')->find('th');
+                foreach ($thead as $th){
+                    $pq = pq($th);
+
+                    $filter = Filter::findOne([
+                        'name' => (String)trim($pq->text()),
+                        'production_id' => (Integer)$product->id
+                    ]);
+
+                    if (count($filter)==0){
+                        $filter = new Filter();
+                        $filter->production_id = $product->id;
+                        $filter->name = (String)trim($pq->text());
+                        $filter->save();
+                    }
+
+                }
+                $schema_id = $_pq->attr('data-execution-id');
+                $tbody = $_pq->find('.product-dimensions-table')
+                    ->find('.row > .columns > .table-wrapper > .custom > .overflow-container > table > tbody')
+                    ->find('tr > th > a');
+                foreach ($tbody as $a){
+                    $a = pq($a);
+                    $filter_aricle = Filter_article::findOne([
+                        'production_id' => (Integer)$product->id,
+                        'article_code' => trim((String)$a->text()),
+                        'schema_id' => $schema_id
+                    ]);
+                    if (count($filter_aricle) == 0){
+                        $filter_aricle = new Filter_article();
+                        $filter_aricle->schema_id = $schema_id;
+                        $filter_aricle->production_id = (Integer)$product->id;
+                        $filter_aricle->article_code = trim((String)$a->text());
+                        $filter_aricle->save();
+                    }
+                }
+            }
+        }
+
+        $query = Filter::find()->count();
+        $this->writeMessage('Filter productions: ' . $query);
+
+        $query = Filter_article::find()->count();
+        $this->writeMessage('Filter article:' . $query);
+    }
+
+    /**
+     * Получить схемы у которые есть артикулы
+     * @param $queryProduction
+     */
     private function getSchema($queryProduction){
+
         foreach ($queryProduction as $production){
-            $clinet = new Client();
-            $res = $clinet->request('GET',self::BASE_URL.$production['url']);
-            $body = $res->getBody();
-            $document = \phpQuery::newDocumentHTML($body);
+
+            $document = $this->getPage(self::BASE_URL.$production['url']);
 
             $productInfo = Productions::findOne($production['id']);
             $productInfo->full_description = trim($document->find('.content')->html());
             $productInfo->save();
 
             $schema_list = $document->find('.small-block-grid-1>li>a');
-            foreach ($schema_list as $schema){
-                $pq = pq($schema);
-                $query_prod = Schema_productions::find()
-                    ->where(['schema_id' => trim($pq->attr('data-execution-id'))])
-                    ->asArray()->one();
 
-                if (count($query_prod) == 0){
-                    $schema_db = new Schema_productions();
-                }else{
-                    $schema_db = Schema_productions::findOne((Integer)$query_prod['id']);
+            foreach ($schema_list as $schema){
+
+                $pq = pq($schema);
+                $schema_id = trim($pq->attr('data-execution-id')); //Берем schema_id
+                $this->writeMessage($schema_id);
+
+                if ($schema_id !== ''){
+                    $query_prod = Schema_productions::findOne(['schema_id' => $schema_id]);
+
+                    if (count($query_prod) == 0){
+                        $query_prod = new Schema_productions();
+                        $query_prod->schema_id = $schema_id;
+                    }else{
+                        $this->deleteImage($query_prod->img_production_url);
+                    }
+
+                    $image_file = $this->generateRandomString(20).'.png';
+                    $url_img = $pq->find('img')->attr('src');
+
+                    $query_prod->name_schema = trim($pq->find('p')->html());
+                    $query_prod->production_id = $production['id'];
+                    $query_prod->img_production_url = $image_file;
+
+                    $productionData = $document->find('.product-datas')
+                        ->find('.product-data-wrapper');
+
+                    foreach ($productionData as $prod){
+                        $_pq = pq($prod);
+                        if ($_pq->attr('data-execution-id') == $schema_id){
+
+                            $_image_file = $this->generateRandomString(20).'.png';
+                            $_url_img = $_pq->find('.product-drawing')
+                                ->find('.row')
+                                ->find('.columns')
+                                ->find('img')
+                                ->attr('src');
+
+                            $this->deleteImage($query_prod->img_schema);
+                            $query_prod->img_schema = $_image_file;
+
+                            $this->getImageRemot(self::BASE_URL.$_url_img,$_image_file);
+                        }
+                    }
+
+                    $query_prod->save();
+                    $this->getImageRemot(self::BASE_URL.$url_img,$image_file);
                 }
-                $schema_db->name_schema = trim($pq->find('p')->html());
-                $schema_db->production_id = $production['id'];
-                $schema_db->schema_id = $pq->attr('data-execution-id');
-                $schema_db->img_production_url = $pq->find('img')->attr('src');
-                $schema_db->save();
             }
         }
     }
 
-    private function productionSchema($queryProduction){
+    private function getProductionSchema($queryProduction){
+        $schemaList = Schema_productions::find([
+            'schema_id' => ''
+        ]);
+
+        foreach ($schemaList as $schema){
+
+            $schema = Schema_productions::findOne($schema->id);
+
+            $production = Productions::findOne($schema->production_id);
+
+            $document = $this->getPage(self::BASE_URL.$production->url);
+            $this->deleteImage($schema->img_schema);
+            $image_file = $this->generateRandomString(12).'.jpg';
+            $url_img = $document->find('.product-drawing')->find('img')->attr('src');
+            $schema->img_schema = $image_file;
+            $schema->save();
+            $this->getImageRemot(self::BASE_URL.$url_img,$image_file);
+        }
+
         foreach ($queryProduction as $production){
             $productInfo = Schema_productions::find()
                 ->where(['production_id'=>$production['id']])
                 ->asArray()->all();
             if (count($productInfo) == 0){
-                $clinet = new Client();
-                $res = $clinet->request('GET',self::BASE_URL.$production['url']);
-                $body = $res->getBody();
-                $document = \phpQuery::newDocumentHTML($body);
-                $schema_db = new Schema_productions();
-                $schema_db->name_schema = $production['name'];
-                $schema_db->production_id = $production['id'];
-                $schema_db->schema_id = '';
-                $schema_db->img_production_url = '';
-                $schema_db->img_schema = $document->find('.product-drawing')->find('img')->attr('src');
-                $schema_db->save();
+                try {
+                    $document = $this->getPage(self::BASE_URL.$production['url']);
+                    $schema_db = new Schema_productions();
+                    $schema_db->name_schema = $production['name'];
+                    $schema_db->production_id = $production['id'];
+                    $schema_db->schema_id = '';
+                    $schema_db->img_production_url = '';
+
+                    $image_file = $this->generateRandomString(12).'.jpg';
+                    $url_img = $document->find('.product-drawing')->find('img')->attr('src');
+                    $schema_db->img_schema = $image_file;
+                    $schema_db->save();
+                    $this->getImageRemot(self::BASE_URL.$url_img,$image_file);
+                }catch (\yii\base\Exception $e){
+                    $this->writeMessage($e->getMessage());
+                }
             }
         }
     }
 
-    //todo-me Добавить схемы
-    private function getImageSchema($queryProduction){
-//        foreach ($queryProduction as $production){
-//            $query_prod = Schema_productions::find()
-//                ->where(['production_id' => $production['id']])
-//                ->asArray()->one();
-//
-//            if (($query_prod['schema_id'] != '') && ($query_prod['img_schema'] == '')){
-//                $production = Productions::findOne($query_prod['production_id']);
-                $production = Productions::findOne(1);
-                $document = $this->getPage(self::BASE_URL.$production->url);
-                $productionData = $document->find('.product-datas')
-                    ->find('.product-data-wrapper');
 
-                    $schema = Schema_productions::find()
-                            ->where(['production_id'=>1])->asArray()
-                            ->all();
-                    foreach ($schema as $sch){
-                        foreach ($productionData as $prod){
-                            $pq = pq($prod);
-                            if ($pq->attr('data-execution-id') == $sch['schema_id']){
-                                echo $pq->find('.product-drawing')
-                                    ->find('.row')
-                                    ->find('.columns')
-                                    ->find('img')
-                                    ->attr('src');
-                            }
-                        }
-                    }
-//                }
-//            }
-//        }
-
-    }
-    /**
-     * Получить фильтры
-     */
-    public function actionFilter(){
-
-    }
-
-    /**
-     * Получить новые продукты
-     */
-    public function actionNewProduction(){
-
-    }
-
-    /**
-     * Получить изображения
-     */
-    public function actionGetImage(){
-        BaseFileHelper::removeDirectory(Yii::getAlias('@app').'/image');
-        BaseFileHelper::createDirectory(Yii::getAlias('@app').'/image');
-        $this->getImageTypes();
-        $this->getImageProductions();
-    }
-
-    private function getImageTypes(){
-        $queryTypes = Types::find()->asArray()->all();
-        foreach ($queryTypes as $types){
-            $query = Types::findOne($types['id']);
-            $image_file = $this->generateRandomString(8).'.jpg';
-            $query->url_img = $image_file;
-            $query->save();
-            $this->getImageRemot(self::BASE_URL.$types['url_img'],$image_file);
-        }
-    }
-
-    private function getImageProductions(){
-        $queryTypes = Productions::find()->asArray()->all();
-        foreach ($queryTypes as $types){
-            $query = Productions::findOne($types['id']);
-            $image_file = $this->generateRandomString(10).'.png';
-            $query->img_url = $image_file;
-            $query->save();
-            $this->getImageRemot(self::BASE_URL.$types['img_url'],$image_file);
-        }
-    }
-    //todo-me Добавить забор картинки из схемы
     private function getImageRemot($url,$toFile){
         try{
             $fileImage = fopen(Yii::getAlias('@app').'/image/'.$toFile,'w');
@@ -267,6 +317,15 @@ class ElesaController extends Controller
             return $e->getMessage();
         }
     }
+
+    private function deleteImage($toFile){
+        try{
+            @unlink(Yii::getAlias('@app').'/image/'.$toFile);
+        }catch (\yii\base\Exception $e){
+            $this->writeMessage($e->getMessage());
+        }
+    }
+
 
     private function writeMessage($message){
         Yii::info($message);
