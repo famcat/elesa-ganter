@@ -11,6 +11,7 @@ use Yii;
  * @property integer $schema_id
  * @property integer $production_id
  * @property string $article_code
+ * @property string $article_dicription
  *
  * @property Productions $production
  */
@@ -32,7 +33,7 @@ class Filter_article extends \yii\db\ActiveRecord
         return [
             [['schema_id', 'production_id'], 'integer'],
             [['production_id'], 'required'],
-            [['article_code'], 'string', 'max' => 255],
+            [['article_code', 'article_dicription'], 'string', 'max' => 255],
             [['production_id'], 'exist', 'skipOnError' => true, 'targetClass' => Productions::className(), 'targetAttribute' => ['production_id' => 'id']],
         ];
     }
@@ -47,6 +48,7 @@ class Filter_article extends \yii\db\ActiveRecord
             'schema_id' => 'Schema ID',
             'production_id' => 'Production ID',
             'article_code' => 'Article Code',
+            'article_dicription' => 'Article Dicription',
         ];
     }
 

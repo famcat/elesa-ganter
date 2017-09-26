@@ -9,6 +9,7 @@ namespace app\commands;
 use phpDocumentor\Reflection\Types\Integer;
 use Yii;
 use yii\console\Exception;
+use yii\db\Query;
 use yii\helpers\Console;
 use yii\console\Application;
 use GuzzleHttp\Client;
@@ -169,20 +170,56 @@ class ElesaController extends Controller
                 $schema_id = $_pq->attr('data-execution-id');
                 $tbody = $_pq->find('.product-dimensions-table')
                     ->find('.row > .columns > .table-wrapper > .custom > .overflow-container > table > tbody')
-                    ->find('tr > th > a');
-                foreach ($tbody as $a){
-                    $a = pq($a);
+                    ->find('tr');
+                foreach ($tbody as $tr){
+                    $tr = pq($tr);
+                    $i_eq = $tr->find('th')->count();
                     $filter_aricle = Filter_article::findOne([
                         'production_id' => (Integer)$product->id,
-                        'article_code' => trim((String)$a->text()),
+                        'article_code' => trim((String)$tr->find('th')->eq(0)->find('a')->text()),
                         'schema_id' => $schema_id
                     ]);
                     if (count($filter_aricle) == 0){
                         $filter_aricle = new Filter_article();
                         $filter_aricle->schema_id = $schema_id;
                         $filter_aricle->production_id = (Integer)$product->id;
-                        $filter_aricle->article_code = trim((String)$a->text());
+                        $filter_aricle->article_code = trim((String)$tr->find('th')->eq(0)->find('a')->text());
+                        $filter_aricle->article_dicription = trim((String)$tr->find('th')->eq(1)->text());
                         $filter_aricle->save();
+                    }else{
+                        $filter_aricle->article_code = trim((String)$tr->find('th')->eq(0)->find('a')->text());
+                        $filter_aricle->article_dicription = trim((String)$tr->find('th')->eq(1)->text());
+                        $filter_aricle->save();
+                    }
+                    $filter_aricle_id = $filter_aricle->id;
+
+                    $td_list = $tr->find('td');
+                    foreach ($td_list as $td){
+                        $td = pq($td);
+                        $trh = $tr->parent('tbody')
+                            ->parent('table')
+                            ->children('thead')
+                            ->children('tr.titlerow');
+
+                        $head_th = $trh->find('th')->eq($i_eq)->text();
+                        $filter_id = (new \yii\db\Query())
+                            ->select(['id'])
+                            ->from('filter')
+                            ->where(['production_id'=>$product->id,'name'=>$head_th])
+                            ->one();
+
+                        $filter_data = Filter_data::findOne([
+                            'filter_article_id' =>  $filter_aricle_id,
+                            'filter_id' => $filter_id['id']
+                        ]);
+                        if (count($filter_data) == 0){
+                            $filter_data = new Filter_data();
+                            $filter_data->filter_article_id = (Integer)$filter_aricle_id;
+                            $filter_data->filter_id = (Integer)$filter_id['id'];
+                        }
+                        $filter_data->value = trim((String)$td->text());
+                        $filter_data->save();
+                        $i_eq++;
                     }
                 }
             }
@@ -193,6 +230,9 @@ class ElesaController extends Controller
 
         $query = Filter_article::find()->count();
         $this->writeMessage('Filter article:' . $query);
+
+        $query = Filter_data::find()->count();
+        $this->writeMessage('Filter data:' . $query);
     }
 
     /**
