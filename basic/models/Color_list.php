@@ -11,6 +11,7 @@ use Yii;
  * @property integer $production_id
  * @property string $color_name
  * @property string $color_code
+ * @property string $color_hex
  *
  * @property Productions $production
  * @property ColorValue[] $colorValues
@@ -33,7 +34,7 @@ class Color_list extends \yii\db\ActiveRecord
         return [
             [['production_id'], 'required'],
             [['production_id'], 'integer'],
-            [['color_name', 'color_code'], 'string', 'max' => 255],
+            [['color_name', 'color_code', 'color_hex'], 'string', 'max' => 255],
             [['production_id'], 'exist', 'skipOnError' => true, 'targetClass' => Productions::className(), 'targetAttribute' => ['production_id' => 'id']],
         ];
     }
@@ -48,6 +49,7 @@ class Color_list extends \yii\db\ActiveRecord
             'production_id' => 'Production ID',
             'color_name' => 'Color Name',
             'color_code' => 'Color Code',
+            'color_hex' => 'Color Hex',
         ];
     }
 
