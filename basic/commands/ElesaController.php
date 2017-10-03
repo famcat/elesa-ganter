@@ -23,6 +23,7 @@ use app\models\Filter_data;
 use app\models\Color_field;
 use app\models\Color_list;
 use app\models\Color_value;
+use app\models\Color_code;
 use yii\helpers\BaseFileHelper;
 /**
  * Контроллер для elesa
@@ -126,9 +127,9 @@ class ElesaController extends Controller
     public function actionSchema(){
         $queryProduction = Productions::find()->asArray()->all();
         $this->getSchema($queryProduction);
-//        $this->getProductionSchema($queryProduction);
-//        $querySchema = Schema_productions::find()->count();
-//        $this->writeMessage('Schema productions ' . $querySchema);
+        $this->getProductionSchema($queryProduction);
+        $querySchema = Schema_productions::find()->count();
+        $this->writeMessage('Schema productions ' . $querySchema);
     }
 
 
@@ -240,7 +241,47 @@ class ElesaController extends Controller
     * Получить цвет
     */
     public function actionColor(){
+        $queryProduction = Productions::find()->all();
+        foreach ($queryProduction as $production){
+            $document = $this->getPage(self::BASE_URL.$production->url);
+            $lists = $document->find('ul[data-filter-type="color"]>li');
+            foreach ($lists as $list){
+                $li = pq($list);
+                if ((String)$li->find('a')->attr('data-value') != ''){
+                    $code = trim((String)$li->find('a')->attr('data-value'));
+                    $name = trim((String)$li->find('a')->text());
+                    $color = trim((String)$li->find('a')->find('span')->attr('style'));
 
+                    $color_list = Color_list::findOne([
+                        'production_id' => $production->id,
+                        'color_name' => $name
+                    ]);
+                    if (count($color_list) == 0){
+                        $color_list = new Color_list();
+                        $color_list->production_id = $production->id;
+                        $color_list->color_name = $name;
+                    }
+                    $color_list->color_code = $code;
+                    $color_list->color_hex = $color;
+                    $color_list->save();
+                }
+            }
+            /*$tr_list = $document->find('section.product-dimensions-table>.row>.columns>.table-wrapper>.custom>.overflow-container>table>thead>tr.titlerow>th');
+            foreach ($tr_list as $tr){
+                $tr = pq($tr);
+                $th = trim((String)$tr->text());
+                $color_field = Color_field::findOne([
+                   'production_id' => $production->id,
+                   'name' => $th
+                ]);
+                if (count($color_field) == 0){
+                    $color_field = new Color_field();
+                    $color_field->production_id = $production->id;
+                    $color_field->name = $th;
+                    $color_field->save();
+                }
+            }*/
+        }
     }
 
     /**
