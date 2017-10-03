@@ -126,9 +126,9 @@ class ElesaController extends Controller
     public function actionSchema(){
         $queryProduction = Productions::find()->asArray()->all();
         $this->getSchema($queryProduction);
-        $this->getProductionSchema($queryProduction);
-        $querySchema = Schema_productions::find()->count();
-        $this->writeMessage('Schema productions ' . $querySchema);
+//        $this->getProductionSchema($queryProduction);
+//        $querySchema = Schema_productions::find()->count();
+//        $this->writeMessage('Schema productions ' . $querySchema);
     }
 
 
@@ -151,6 +151,7 @@ class ElesaController extends Controller
                     ->find('.overflow-container')
                     ->find('table')->find('thead')
                     ->find('.titlerow')->find('th');
+
                 foreach ($thead as $th){
                     $pq = pq($th);
 
@@ -236,17 +237,32 @@ class ElesaController extends Controller
     }
 
     /**
+    * Получить цвет
+    */
+    public function actionColor(){
+
+    }
+
+    /**
+    *  Получить документ
+    */
+    public function actionDocument(){
+
+    }
+
+    /**
      * Получить схемы у которые есть артикулы
      * @param $queryProduction
      */
     private function getSchema($queryProduction){
+          $production = Productions::find()->one();
 
         foreach ($queryProduction as $production){
 
             $document = $this->getPage(self::BASE_URL.$production['url']);
 
             $productInfo = Productions::findOne($production['id']);
-            $productInfo->full_description = trim($document->find('.content')->html());
+            $productInfo->full_description = trim($document->find('.section-container')->html());
             $productInfo->save();
 
             $schema_list = $document->find('.small-block-grid-1>li>a');
@@ -298,6 +314,7 @@ class ElesaController extends Controller
                     $this->getImageRemot(self::BASE_URL.$url_img,$image_file);
                 }
             }
+
         }
     }
 
