@@ -46,6 +46,8 @@ Vagrant.configure("2") do |config|
 
   # config.vm.network "forwarded_port", guest: 33306,  host: options['mysql_port']
 
+  config.vm.network "forwarded_port", guest: 8084,  host: 8080
+
   config.vm.hostname = options['machine_name']
 
   config.vm.define options['machine_name']
