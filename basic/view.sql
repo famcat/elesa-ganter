@@ -13,5 +13,6 @@ select f.production_id,f.schema_id,f.article_code,f.article_dicription,v.val
 from filter_article as f
 LEFT JOIN  v_filter_template as v on v.filter_article_id = f.id;
 
+
 select * from v_filter_data;
 select * from v_filter_headers;
