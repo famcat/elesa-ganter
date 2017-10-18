@@ -66,6 +66,6 @@ class Color_list extends \yii\db\ActiveRecord
      */
     public function getColorValues()
     {
-        return $this->hasMany(ColorValue::className(), ['color_list_id' => 'id']);
+        return $this->hasMany(Color_value::className(), ['color_list_id' => 'id']);
     }
 }

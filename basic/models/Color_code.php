@@ -32,7 +32,7 @@ class Color_code extends \yii\db\ActiveRecord
             [['color_list_id'], 'required'],
             [['color_list_id'], 'integer'],
             [['color_article'], 'string', 'max' => 255],
-            [['color_list_id'], 'exist', 'skipOnError' => true, 'targetClass' => ColorList::className(), 'targetAttribute' => ['color_list_id' => 'id']],
+            [['color_list_id'], 'exist', 'skipOnError' => true, 'targetClass' => Color_list::className(), 'targetAttribute' => ['color_list_id' => 'id']],
         ];
     }
 
@@ -53,6 +53,6 @@ class Color_code extends \yii\db\ActiveRecord
      */
     public function getColorList()
     {
-        return $this->hasOne(ColorList::className(), ['id' => 'color_list_id']);
+        return $this->hasOne(Color_list::className(), ['id' => 'color_list_id']);
     }
 }

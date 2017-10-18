@@ -12,7 +12,7 @@ class m170926_203428_filter_add extends Migration
     public function safeDown()
     {
         echo "m170926_203428_filter_add cannot be reverted.\n";
-        $this->addColumn('{{%filter_article}}','article_dicription',$this->string(255));
+        $this->dropColumn('{{%filter_article}}','article_dicription');
         return false;
     }
 

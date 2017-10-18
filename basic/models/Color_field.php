@@ -62,6 +62,6 @@ class Color_field extends \yii\db\ActiveRecord
      */
     public function getColorValues()
     {
-        return $this->hasMany(ColorValue::className(), ['color_field_id' => 'id']);
+        return $this->hasMany(Color_value::className(), ['color_field_id' => 'id']);
     }
 }

@@ -33,8 +33,8 @@ class Color_value extends \yii\db\ActiveRecord
         return [
             [['color_list_id', 'color_field_id'], 'integer'],
             [['color_value'], 'string', 'max' => 255],
-            [['color_field_id'], 'exist', 'skipOnError' => true, 'targetClass' => ColorField::className(), 'targetAttribute' => ['color_field_id' => 'id']],
-            [['color_list_id'], 'exist', 'skipOnError' => true, 'targetClass' => ColorList::className(), 'targetAttribute' => ['color_list_id' => 'id']],
+            [['color_field_id'], 'exist', 'skipOnError' => true, 'targetClass' => Color_field::className(), 'targetAttribute' => ['color_field_id' => 'id']],
+            [['color_list_id'], 'exist', 'skipOnError' => true, 'targetClass' => Color_list::className(), 'targetAttribute' => ['color_list_id' => 'id']],
         ];
     }
 
@@ -56,7 +56,7 @@ class Color_value extends \yii\db\ActiveRecord
      */
     public function getColorField()
     {
-        return $this->hasOne(ColorField::className(), ['id' => 'color_field_id']);
+        return $this->hasOne(Color_field::className(), ['id' => 'color_field_id']);
     }
 
     /**
@@ -64,6 +64,6 @@ class Color_value extends \yii\db\ActiveRecord
      */
     public function getColorList()
     {
-        return $this->hasOne(ColorList::className(), ['id' => 'color_list_id']);
+        return $this->hasOne(Color_list::className(), ['id' => 'color_list_id']);
     }
 }

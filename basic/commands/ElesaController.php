@@ -25,6 +25,8 @@ use app\models\Color_list;
 use app\models\Color_value;
 use app\models\Color_code;
 use yii\helpers\BaseFileHelper;
+use app\models\VColor_table;
+
 /**
  * Контроллер для elesa
  *
@@ -187,10 +189,12 @@ class ElesaController extends Controller
                         $filter_aricle->production_id = (Integer)$product->id;
                         $filter_aricle->article_code = trim((String)$tr->find('th')->eq(0)->find('a')->text());
                         $filter_aricle->article_dicription = trim((String)$tr->find('th')->eq(1)->text());
+                        $filter_aricle->color_attribute = trim((String)$tr->attr('data-color'));
                         $filter_aricle->save();
                     }else{
                         $filter_aricle->article_code = trim((String)$tr->find('th')->eq(0)->find('a')->text());
                         $filter_aricle->article_dicription = trim((String)$tr->find('th')->eq(1)->text());
+                        $filter_aricle->color_attribute = trim((String)$tr->attr('data-color'));
                         $filter_aricle->save();
                     }
                     $filter_aricle_id = $filter_aricle->id;
@@ -241,6 +245,7 @@ class ElesaController extends Controller
     * Получить цвет
     */
     public function actionColor(){
+        /**
         $queryProduction = Productions::find()->all();
         foreach ($queryProduction as $production){
             $document = $this->getPage(self::BASE_URL.$production->url);
@@ -266,21 +271,64 @@ class ElesaController extends Controller
                     $color_list->save();
                 }
             }
-            /*$tr_list = $document->find('section.product-dimensions-table>.row>.columns>.table-wrapper>.custom>.overflow-container>table>thead>tr.titlerow>th');
-            foreach ($tr_list as $tr){
-                $tr = pq($tr);
-                $th = trim((String)$tr->text());
+        }
+        */
+        $queryList = VColor_table::find()->all();
+        foreach ($queryList as $color){
+            $production =  Productions::findOne($color->production_id);
+            $document = $this->getPage(self::BASE_URL.$production->url);
+            $tableColor = $document->find('.product-detail')
+                ->find('section.normal-table')
+                ->find('.row')
+                ->find('.columns')
+                ->find('.table-wrapper')
+                ->find('.custom')
+                ->find('.overflow-container')
+                ->find('table');
+            $thead = $tableColor->find('thead')->find('.titlerow')->find('th');
+
+            foreach ($thead as $th){
+                $th = pq($th);
+                $th_name = trim(
+                    (String)$th->text()
+                );
                 $color_field = Color_field::findOne([
-                   'production_id' => $production->id,
-                   'name' => $th
+                   'production_id' => $color->production_id,
+                   'name' => $th_name
                 ]);
+
                 if (count($color_field) == 0){
                     $color_field = new Color_field();
-                    $color_field->production_id = $production->id;
-                    $color_field->name = $th;
-                    $color_field->save();
                 }
-            }*/
+                $color_field->production_id = $color->production_id;
+                $color_field->name = $th_name;
+                $color_field->save();
+            }
+            //Добавления ариткулов для цвета
+            $tbody = $tableColor->find('tbody')->find('tr');
+            foreach ($tbody as $tr){
+                $tr = pq($tr);
+                $th_article = trim(
+                    (String)$tr->find('th')->find('a')->text()
+                );
+                $color_list = Color_list::findOne([
+                   'production_id' => $color->production_id,
+                    'color_code' => trim(
+                        (String)$tr->attr('data-color')
+                    )
+                ]);
+                $color_code = Color_code::findOne([
+                    'color_list_id' => $color_list->id,
+                    'color_article' => $th_article
+                ]);
+                if (count($color_code) == 0){
+                    $color_code = new Color_code();
+                }
+                $color_code->color_list_id = $color_list->id;
+                $color_code->color_article = $th_article;
+                $color_code->save();
+            }
+
         }
     }
 
