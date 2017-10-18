@@ -307,9 +307,13 @@ class ElesaController extends Controller
             //Добавления ариткулов для цвета
             $tbody = $tableColor->find('tbody')->find('tr');
             foreach ($tbody as $tr){
+                $i_eq = 0;
                 $tr = pq($tr);
                 $th_article = trim(
                     (String)$tr->find('th')->find('a')->text()
+                );
+                $th_description = trim(
+                    (String)$tr->find('th')->eq(1)->text()
                 );
                 $color_list = Color_list::findOne([
                    'production_id' => $color->production_id,
@@ -326,9 +330,46 @@ class ElesaController extends Controller
                 }
                 $color_code->color_list_id = $color_list->id;
                 $color_code->color_article = $th_article;
+                $color_code->color_description = $th_description;
                 $color_code->save();
-            }
 
+                $td_list = $tr->find('td');
+
+                if ($th_description != ''){
+                    $i_eq = 2;
+                }
+
+                foreach ($td_list as $td){
+                    $td = pq($td);
+                    $trh = $tr->parent('tbody')
+                        ->parent('table')
+                        ->children('thead')
+                        ->children('tr.titlerow');
+
+                    $head_th = $trh->find('th')->eq($i_eq)->text();
+                    $color_field_id = (new \yii\db\Query())
+                        ->select(['id'])
+                        ->from('color_field')
+                        ->where(['production_id'=>$color->production_id,'name'=>$head_th])
+                        ->one();
+
+                    $color_value = Color_value::findOne([
+                       'color_list_id' =>  $color_list->id,
+                       'color_field_id' => $color_field_id['id']
+                    ]);
+
+                    if (count($color_value) == 0){
+                        $color_value = new Color_value();
+                    }
+                    $color_value->color_list_id = $color_list->id;
+                    $color_value->color_field_id = $color_field_id['id'];
+                    $color_value->color_value = trim(
+                        (String)$td->text()
+                    );
+                    $color_value->save();
+                    $i_eq++;
+                }
+            }
         }
     }
 

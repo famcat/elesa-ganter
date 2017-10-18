@@ -10,6 +10,7 @@ use Yii;
  * @property integer $id
  * @property integer $color_list_id
  * @property string $color_article
+ * @property string $color_description
  *
  * @property ColorList $colorList
  */
@@ -31,7 +32,7 @@ class Color_code extends \yii\db\ActiveRecord
         return [
             [['color_list_id'], 'required'],
             [['color_list_id'], 'integer'],
-            [['color_article'], 'string', 'max' => 255],
+            [['color_article','color_description'], 'string', 'max' => 255],
             [['color_list_id'], 'exist', 'skipOnError' => true, 'targetClass' => Color_list::className(), 'targetAttribute' => ['color_list_id' => 'id']],
         ];
     }
