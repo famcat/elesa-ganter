@@ -245,7 +245,6 @@ class ElesaController extends Controller
     * Получить цвет
     */
     public function actionColor(){
-        /**
         $queryProduction = Productions::find()->all();
         foreach ($queryProduction as $production){
             $document = $this->getPage(self::BASE_URL.$production->url);
@@ -272,7 +271,6 @@ class ElesaController extends Controller
                 }
             }
         }
-        */
         $queryList = VColor_table::find()->all();
         foreach ($queryList as $color){
             $production =  Productions::findOne($color->production_id);
