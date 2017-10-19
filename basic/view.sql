@@ -49,3 +49,21 @@ create view v_color_table as
 select t.production_id from v_temp_color_no_val_table t,
   v_temp_color_table p
 where t.production_id = p.production_id
+
+
+drop view v_filter_headers;
+create view v_filter_headers as
+  select schema_id,production_id,GROUP_CONCAT(name  SEPARATOR '|') as headers from filter
+  GROUP BY schema_id
+  ORDER BY production_id;
+
+select * from v_filter_headers;
+
+drop VIEW v_filter_data;
+create view v_filter_data as
+  select SQL_CACHE  SQL_BIG_RESULT f.id,f.production_id,f.schema_id,f.article_code,f.article_dicription,v.val,f.color_attribute
+  from filter_article as f
+    LEFT JOIN  v_temp_filter_data as v on v.filter_article_id = f.id
+  ORDER BY f.production_id,f.schema_id;
+
+SELECT * from v_filter_data;

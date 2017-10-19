@@ -6,6 +6,7 @@
  */
 namespace app\commands;
 
+use app\models\Document;
 use phpDocumentor\Reflection\Types\Integer;
 use Yii;
 use yii\console\Exception;
@@ -146,6 +147,10 @@ class ElesaController extends Controller
             foreach ($productionData as $prod){
                 $_pq = pq($prod);
 
+                $schema_id = trim(
+                    (String)$_pq->attr('data-execution-id')
+                );
+
                 $thead = $_pq->find('.product-dimensions-table')
                     ->find('.row')
                     ->find('.columns')
@@ -160,21 +165,24 @@ class ElesaController extends Controller
 
                     $filter = Filter::findOne([
                         'name' => (String)trim($pq->text()),
-                        'production_id' => (Integer)$product->id
+                        'production_id' => (Integer)$product->id,
+                        'schema_id' => (Integer)$schema_id
                     ]);
 
                     if (count($filter)==0){
                         $filter = new Filter();
-                        $filter->production_id = $product->id;
-                        $filter->name = (String)trim($pq->text());
-                        $filter->save();
                     }
 
+                    $filter->production_id = $product->id;
+                    $filter->schema_id = (Integer)$schema_id;
+                    $filter->name = (String)trim($pq->text());
+                    $filter->save();
+
                 }
-                $schema_id = $_pq->attr('data-execution-id');
                 $tbody = $_pq->find('.product-dimensions-table')
                     ->find('.row > .columns > .table-wrapper > .custom > .overflow-container > table > tbody')
                     ->find('tr');
+
                 foreach ($tbody as $tr){
                     $tr = pq($tr);
                     $i_eq = $tr->find('th')->count();
@@ -211,7 +219,7 @@ class ElesaController extends Controller
                         $filter_id = (new \yii\db\Query())
                             ->select(['id'])
                             ->from('filter')
-                            ->where(['production_id'=>$product->id,'name'=>$head_th])
+                            ->where(['production_id'=>$product->id,'name'=>$head_th,'schema_id'=>$schema_id])
                             ->one();
 
                         $filter_data = Filter_data::findOne([
@@ -375,7 +383,32 @@ class ElesaController extends Controller
     *  Получить документ
     */
     public function actionDocument(){
+        $productList = Productions::find()->all();
+        foreach ($productList as $product){
+            $document = $this->getPage(self::BASE_URL.$product->url);
+            $a = $document->find('.table-footer-legend')
+                ->find('.row')
+                ->find('.columns')
+                ->find('.table_footnotes')
+                ->find('.sub-description')
+                ->find('a');
+            $a = pq($a);
 
+            $name_pdf = $product->id . '.pdf';
+
+            $document = Document::findOne([
+               'production_id' => $product->id,
+                'document_title' => $name_pdf
+            ]);
+
+            if (count($document) == 0){
+                $document = new Document();
+            }
+            $this->getPDF(self::BASE_URL.$a->attr('href'),$name_pdf);
+            $document->production_id = $product->id;
+            $document->document_title = $name_pdf;
+            $document->save();
+        }
     }
 
     /**
@@ -490,6 +523,16 @@ class ElesaController extends Controller
     private function getImageRemot($url,$toFile){
         try{
             $fileImage = fopen(Yii::getAlias('@app').'/image/'.$toFile,'w');
+            $client = new Client();
+            $res = $client->get($url,['save_to' => $fileImage]);
+        }catch (Exception $e){
+            return $e->getMessage();
+        }
+    }
+
+    private function getPDF($url,$toFile){
+        try{
+            $fileImage = fopen(Yii::getAlias('@app').'/document/'.$toFile,'w');
             $client = new Client();
             $res = $client->get($url,['save_to' => $fileImage]);
         }catch (Exception $e){
