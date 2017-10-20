@@ -143,7 +143,9 @@ class ElesaController extends Controller
         $productList = Productions::find()->all();
         foreach ($productList as $product){
             $document = $this->getPage(self::BASE_URL.$product->url);
+
             $productionData = $document->find('.product-datas')->find('.product-data-wrapper');
+
             foreach ($productionData as $prod){
                 $_pq = pq($prod);
 
@@ -163,25 +165,32 @@ class ElesaController extends Controller
                 foreach ($thead as $th){
                     $pq = pq($th);
 
-                    $filter = Filter::findOne([
-                        'name' => (String)trim($pq->text()),
-                        'production_id' => (Integer)$product->id,
-                        'schema_id' => (Integer)$schema_id
-                    ]);
+                    $name_header = trim(
+                        (String)$pq->text()
+                    );
+                    $filter_id = (new \yii\db\Query())
+                        ->select(['id'])
+                        ->from('filter')
+                        ->where('production_id = '.$product->id . ' and name = BINARY "' . $name_header . '" and schema_id =' .$schema_id)
+                        ->limit(1);
 
-                    if (count($filter)==0){
+                    $filter_id = $filter_id->one();
+                    if ($filter_id['id'] == ''){
                         $filter = new Filter();
+                    }else{
+                        $filter = Filter::findOne($filter_id['id']);
                     }
 
                     $filter->production_id = $product->id;
                     $filter->schema_id = (Integer)$schema_id;
                     $filter->name = (String)trim($pq->text());
                     $filter->save();
-
                 }
                 $tbody = $_pq->find('.product-dimensions-table')
                     ->find('.row > .columns > .table-wrapper > .custom > .overflow-container > table > tbody')
                     ->find('tr');
+
+
 
                 foreach ($tbody as $tr){
                     $tr = pq($tr);
@@ -216,10 +225,11 @@ class ElesaController extends Controller
                             ->children('tr.titlerow');
 
                         $head_th = $trh->find('th')->eq($i_eq)->text();
+
                         $filter_id = (new \yii\db\Query())
                             ->select(['id'])
                             ->from('filter')
-                            ->where(['production_id'=>$product->id,'name'=>$head_th,'schema_id'=>$schema_id])
+                            ->where('production_id = '.$product->id . ' and name = BINARY "' . $head_th . '" and schema_id =' .$schema_id)
                             ->one();
 
                         $filter_data = Filter_data::findOne([
@@ -236,6 +246,7 @@ class ElesaController extends Controller
                         $i_eq++;
                     }
                 }
+
             }
         }
 
